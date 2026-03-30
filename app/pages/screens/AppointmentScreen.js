@@ -3,7 +3,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import { Alert, Keyboard, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, View, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Cake, Calendar, Check, ChevronDown, Clock, MessageCircle, Pencil, Phone, Plus, Search, Trash2, User, X, Mail, ClipboardList, Activity, HeartPulse, Weight, Thermometer, CheckCircle2 } from 'lucide-react-native';
+import { ArrowLeft, Cake, Calendar, Check, ChevronDown, Clock, Droplet, MessageCircle, Pencil, Phone, Plus, Search, Trash2, User, X, Mail, ClipboardList, Activity, HeartPulse, Weight, Thermometer, CheckCircle2 } from 'lucide-react-native';
+import { BLOOD_GROUPS, INITIAL_FORM_STATE } from '../../constants/medical';
 import { getMedicalModalTheme } from '../../constants/tableTheme';
 import { GenderSelector, InputGroup } from '../../components/commons/FormControls';
 import { calculateAge } from '../../utils/patient.js';
@@ -16,13 +17,18 @@ export default function AppointmentScreen({ theme, onBack, form, setForm, appoin
     const [searchQuery, setSearchQuery] = useState('');
     const [pickerMode, setPickerMode] = useState(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const[showBloodPicker, setShowBloodPicker] = useState(false); // New Blood Group Picker State
     const[tempDate, setTempDate] = useState(new Date());
     const [patientSearch, setPatientSearch] = useState('');
     const isEditorView = viewMode === 'new';
+    const bloodOptions = (BLOOD_GROUPS && BLOOD_GROUPS.length ? BLOOD_GROUPS : ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'Custom']).map((bg) =>
+        typeof bg === 'string' ? { label: bg, value: bg } : bg
+    );
 
     const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const formatTime = (date) => date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
+    const getBloodLabel = () => (form.blood === 'Custom' ? (form.customBlood || 'Custom / Other') : form.blood);
 
     const getAvatarLabel = (name = '') => {
         const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
@@ -58,8 +64,12 @@ export default function AppointmentScreen({ theme, onBack, form, setForm, appoin
             return;
         }
 
+        if (form.blood === 'Custom' && !(form.customBlood || '').trim()) {
+            Alert.alert('Missing Info', 'Please enter a blood group when selecting Custom.');
+            return;
+        }
 
-
+        const finalBlood = form.blood === 'Custom' ? (form.customBlood || '').trim() : form.blood;
         const appointmentData = {
             name: form.name,
             mobile: form.mobile,
@@ -67,6 +77,7 @@ export default function AppointmentScreen({ theme, onBack, form, setForm, appoin
             time: formatTime(form.timeObj),
             date: formatDate(form.dateObj),
             notes: form.notes || 'Regular Visit',
+            blood: finalBlood
         };
 
         const newAppt = { id: Date.now(), ...appointmentData, status: 'upcoming' };
@@ -113,6 +124,7 @@ export default function AppointmentScreen({ theme, onBack, form, setForm, appoin
                 age: form.age || 'N/A',
                 dob: form.dob || '',
                 gender: form.gender || 'M',
+                blood: finalBlood,
                 address: form.address || '',
                 registeredDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
                 vitalsHistory: vitalsEntry ? [vitalsEntry] :[],
@@ -196,6 +208,7 @@ export default function AppointmentScreen({ theme, onBack, form, setForm, appoin
             age: patient.age,
             dob: patient.dob || '',
             gender: patient.gender,
+            blood: patient.blood,
             address: patient.address || '',
             sys: latestVitals?.sys || '',
             dia: latestVitals?.dia || '',
@@ -406,7 +419,26 @@ export default function AppointmentScreen({ theme, onBack, form, setForm, appoin
 
                     <GenderSelector value={form.gender} onChange={(val) => setForm({ ...form, gender: val })} theme={theme} />
 
-
+                    <View style={{ marginTop: 5 }}>
+                        <Text style={{ color: theme.textDim, marginBottom: 8, fontWeight: '700', fontSize: 13 }}>Blood Group</Text>
+                        <TouchableOpacity onPress={() => setShowBloodPicker(true)} style={[styles.inputContainer, { backgroundColor: theme.inputBg, borderColor: theme.border, justifyContent: 'space-between', paddingRight: 15, height: 54, borderRadius: 16 }]}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>\
+                                <Droplet size={20} color="#ef4444" />\
+                                <Text style={{ color: theme.text, marginLeft: 10, fontSize: 15, fontWeight: '600' }}>{getBloodLabel()}</Text>\
+                            </View>
+                            <ChevronDown size={18} color={theme.textDim} />
+                        </TouchableOpacity>
+                    </View>
+                    
+                    {form.blood === 'Custom' && (
+                        <View>
+                            <Text style={{ color: theme.textDim, marginBottom: 8, fontWeight: '700', fontSize: 13 }}>Enter Blood Group</Text>
+                            <View style={[styles.inputContainer, { backgroundColor: theme.inputBg, borderColor: theme.border, height: 54, borderRadius: 16 }]}>
+                                <Droplet size={20} color={theme.primary} />
+                                <TextInput style={[styles.textInput, { color: theme.text, fontWeight: '600' }]} value={form.customBlood} onChangeText={(t) => setForm({ ...form, customBlood: t })} placeholder="Type blood group here..." placeholderTextColor={theme.textDim} />
+                            </View>
+                        </View>
+                    )}
                 </View>
             </View>
 
@@ -520,7 +552,43 @@ export default function AppointmentScreen({ theme, onBack, form, setForm, appoin
     return (
         <View style={[styles.container, { backgroundColor: theme.bg }]}>
             
+            {/* Blood Group Picker */}
+            <Modal visible={showBloodPicker} transparent animationType="slide" onRequestClose={() => setShowBloodPicker(false)}>
+                <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowBloodPicker(false)} />
+                    <LinearGradient colors={theme.mode === 'dark' ?['#1e293b', '#0f172a'] :['#ffffff', '#f8fafc']} style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingBottom: insets.bottom + 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 }}>
+                        <View style={{ padding: 24 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                    <View style={{ backgroundColor: '#ef444420', padding: 8, borderRadius: 12, marginRight: 12 }}>
+                                        <Droplet size={20} color="#ef4444" />
+                                    </View>
+                                    <Text style={{ fontSize: 22, fontWeight: '900', color: theme.text }}>Blood Group</Text>
+                                </View>
+                                <TouchableOpacity onPress={() => setShowBloodPicker(false)} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.inputBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.border }}>
+                                    <X size={24} color={theme.textDim} />
+                                </TouchableOpacity>
+                            </View>
 
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' }}>
+                                {bloodOptions.map(({ label, value }) => (
+                                    <TouchableOpacity 
+                                        key={value} 
+                                        onPress={() => { setForm({ ...form, blood: value, ...(value !== 'Custom' ? { customBlood: '' } : {}) }); setShowBloodPicker(false); }} 
+                                        style={{ width: '31%', backgroundColor: form.blood === value ? '#ef4444' : theme.inputBg, paddingVertical: 14, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: form.blood === value ? '#ef4444' : theme.border }}
+                                    >
+                                        <Text style={{ color: form.blood === value ? 'white' : theme.text, fontWeight: '800', fontSize: 16 }}>{label}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            <TouchableOpacity onPress={() => setShowBloodPicker(false)} style={{ marginTop: 24, backgroundColor: theme.inputBg, paddingVertical: 16, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: theme.border }}>
+                                <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 }}>Close Window</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </LinearGradient>
+                </View>
+            </Modal>
 
             {/* Date Picker */}
             {showDatePicker && (

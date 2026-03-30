@@ -27,6 +27,11 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    ```bash
    MONGODB_URI=mongodb://127.0.0.1:27017/clinicppm
    ```
+   5. Start Expo (BEST FIXED COMMAND ✅)
+npx expo start --tunnel -c
+
+👉 --tunnel → Works on any network / real phone
+👉 -c → Clears cache (fixes most bugs)
 
 In the output, you'll find options to open the app in a
 

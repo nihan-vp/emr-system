@@ -3,21 +3,50 @@
     "name": "suhaimast",
     "slug": "suhaimast",
     "version": "1.0.0",
+
+    "orientation": "portrait",
+
     "icon": "./assets/images/ic_launcher_monochrome.png",
+
+    "userInterfaceStyle": "light",
+
     "splash": {
       "image": "./assets/images/ic_launcher_monochrome.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+
+    "ios": {
+      "supportsTablet": true
+    },
+
     "android": {
+      "package": "com.suhaimsoft.suhaimast",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/ic_launcher_monochrome.png",
         "backgroundColor": "#ffffff"
-      },
-      "package": "com.suhaimsoft.suhaimast"
+      }
     },
+
+    "web": {
+      "favicon": "./assets/images/ic_launcher_monochrome.png"
+    },
+
     "plugins": [
       "@react-native-community/datetimepicker"
-    ]
+    ],
+
+    "updates": {
+      "enabled": false
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    }
   }
 }

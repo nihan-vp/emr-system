@@ -420,13 +420,38 @@ export default function AppointmentScreen({ theme, onBack, form, setForm, appoin
                     <GenderSelector value={form.gender} onChange={(val) => setForm({ ...form, gender: val })} theme={theme} />
 
                     <View style={{ marginTop: 5 }}>
-                        <Text style={{ color: theme.textDim, marginBottom: 8, fontWeight: '700', fontSize: 13 }}>Blood Group</Text>
-                        <TouchableOpacity onPress={() => setShowBloodPicker(true)} style={[styles.inputContainer, { backgroundColor: theme.inputBg, borderColor: theme.border, justifyContent: 'space-between', paddingRight: 15, height: 54, borderRadius: 16 }]}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>\
-                                <Droplet size={20} color="#ef4444" />\
-                                <Text style={{ color: theme.text, marginLeft: 10, fontSize: 15, fontWeight: '600' }}>{getBloodLabel()}</Text>\
+                        <Text style={{ color: theme.textDim, marginBottom: 8, fontWeight: '700', fontSize: 13, letterSpacing: 1 }}>Blood Group</Text>
+                        <TouchableOpacity
+                            onPress={() => setShowBloodPicker(true)}
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                backgroundColor: '#f0fdfa',
+                                borderColor: '#38bdf8',
+                                borderWidth: 2,
+                                borderRadius: 18,
+                                paddingVertical: 12,
+                                paddingHorizontal: 18,
+                                shadowColor: '#38bdf8',
+                                shadowOffset: { width: 0, height: 4 },
+                                shadowOpacity: 0.15,
+                                shadowRadius: 10,
+                                elevation: 4,
+                                marginBottom: 2,
+                            }}
+                        >
+                            <LinearGradient
+                                colors={['#38bdf8', '#0ea5e9', '#06b6d4']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={{ borderRadius: 12, padding: 6, marginRight: 12 }}
+                            >
+                                <Droplet size={22} color="#fff" />
+                            </LinearGradient>
+                            <Text style={{ color: '#0ea5e9', fontSize: 17, fontWeight: '900', letterSpacing: 1 }}>{getBloodLabel()}</Text>
+                            <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                                <ChevronDown size={22} color="#38bdf8" />
                             </View>
-                            <ChevronDown size={18} color={theme.textDim} />
                         </TouchableOpacity>
                     </View>
                     
@@ -554,36 +579,55 @@ export default function AppointmentScreen({ theme, onBack, form, setForm, appoin
             
             {/* Blood Group Picker */}
             <Modal visible={showBloodPicker} transparent animationType="slide" onRequestClose={() => setShowBloodPicker(false)}>
-                <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' }}>
                     <TouchableOpacity style={{ flex: 1 }} onPress={() => setShowBloodPicker(false)} />
-                    <LinearGradient colors={theme.mode === 'dark' ?['#1e293b', '#0f172a'] :['#ffffff', '#f8fafc']} style={{ borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingBottom: insets.bottom + 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 }}>
-                        <View style={{ padding: 24 }}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                    <LinearGradient
+                        colors={["#f0fdfa", "#bae6fd", "#a7f3d0", "#fef9c3"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={{ borderTopLeftRadius: 40, borderTopRightRadius: 40, paddingBottom: insets.bottom + 24, shadowColor: '#0ea5e9', shadowOffset: { width: 0, height: -12 }, shadowOpacity: 0.18, shadowRadius: 30, elevation: 16 }}
+                    >
+                        <View style={{ padding: 28 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <View style={{ backgroundColor: '#ef444420', padding: 8, borderRadius: 12, marginRight: 12 }}>
-                                        <Droplet size={20} color="#ef4444" />
-                                    </View>
-                                    <Text style={{ fontSize: 22, fontWeight: '900', color: theme.text }}>Blood Group</Text>
+                                    <LinearGradient colors={['#38bdf8', '#0ea5e9', '#06b6d4']} style={{ padding: 12, borderRadius: 16, marginRight: 16 }}>
+                                        <Droplet size={28} color="#fff" />
+                                    </LinearGradient>
+                                    <Text style={{ fontSize: 26, fontWeight: '900', color: '#0ea5e9', letterSpacing: 2 }}>Blood Group</Text>
                                 </View>
-                                <TouchableOpacity onPress={() => setShowBloodPicker(false)} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.inputBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.border }}>
-                                    <X size={24} color={theme.textDim} />
+                                <TouchableOpacity onPress={() => setShowBloodPicker(false)} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#f0fdfa', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#bae6fd' }}>
+                                    <X size={28} color="#0ea5e9" />
                                 </TouchableOpacity>
                             </View>
 
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between' }}>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16, justifyContent: 'space-between', marginBottom: 12 }}>
                                 {bloodOptions.map(({ label, value }) => (
-                                    <TouchableOpacity 
-                                        key={value} 
-                                        onPress={() => { setForm({ ...form, blood: value, ...(value !== 'Custom' ? { customBlood: '' } : {}) }); setShowBloodPicker(false); }} 
-                                        style={{ width: '31%', backgroundColor: form.blood === value ? '#ef4444' : theme.inputBg, paddingVertical: 14, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: form.blood === value ? '#ef4444' : theme.border }}
+                                    <TouchableOpacity
+                                        key={value}
+                                        onPress={() => { setForm({ ...form, blood: value, ...(value !== 'Custom' ? { customBlood: '' } : {}) }); setShowBloodPicker(false); }}
+                                        style={{
+                                            width: '30%',
+                                            backgroundColor: form.blood === value ? '#38bdf8' : '#fff',
+                                            paddingVertical: 18,
+                                            borderRadius: 18,
+                                            alignItems: 'center',
+                                            borderWidth: 2,
+                                            borderColor: form.blood === value ? '#0ea5e9' : '#bae6fd',
+                                            marginBottom: 10,
+                                            shadowColor: form.blood === value ? '#0ea5e9' : '#bae6fd',
+                                            shadowOffset: { width: 0, height: 4 },
+                                            shadowOpacity: 0.12,
+                                            shadowRadius: 8,
+                                            elevation: 2,
+                                        }}
                                     >
-                                        <Text style={{ color: form.blood === value ? 'white' : theme.text, fontWeight: '800', fontSize: 16 }}>{label}</Text>
+                                        <Text style={{ color: form.blood === value ? '#fff' : '#0ea5e9', fontWeight: '900', fontSize: 18, letterSpacing: 1 }}>{label}</Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>
 
-                            <TouchableOpacity onPress={() => setShowBloodPicker(false)} style={{ marginTop: 24, backgroundColor: theme.inputBg, paddingVertical: 16, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: theme.border }}>
-                                <Text style={{ color: theme.text, fontSize: 16, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 }}>Close Window</Text>
+                            <TouchableOpacity onPress={() => setShowBloodPicker(false)} style={{ marginTop: 24, backgroundColor: '#a7f3d0', paddingVertical: 18, borderRadius: 18, alignItems: 'center', borderWidth: 2, borderColor: '#38bdf8' }}>
+                                <Text style={{ color: '#0ea5e9', fontSize: 18, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 2 }}>Close Window</Text>
                             </TouchableOpacity>
                         </View>
                     </LinearGradient>

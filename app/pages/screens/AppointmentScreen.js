@@ -1,14 +1,38 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
-import { Alert, Keyboard, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, View, Dimensions } from 'react-native';
+import { Alert, Keyboard, KeyboardAvoidingView, Linking, Modal, Platform, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Cake, Calendar, Check, ChevronDown, Clock, MessageCircle, Pencil, Phone, Plus, Search, Trash2, User, X, Mail, ClipboardList, Activity, HeartPulse, Weight, Thermometer, CheckCircle2 } from 'lucide-react-native';
+import { ArrowLeft, Cake, Calendar, Check, ChevronDown, Clock, MessageCircle, Pencil, Phone, Plus, Search, Trash2, User, X, Mail, ClipboardList, Activity, HeartPulse, Weight, Thermometer, Droplet } from 'lucide-react-native';
 import { getMedicalModalTheme } from '../../constants/tableTheme';
 import { GenderSelector, InputGroup } from '../../components/commons/FormControls';
 import { calculateAge } from '../../utils/patient.js';
 
-const { width } = Dimensions.get('window');
+const createInitialFormState = () => ({
+    name: '',
+    mobile: '',
+    email: '',
+    age: '',
+    gender: 'M',
+    address: '',
+    date: 'Today',
+    time: '09:00 AM',
+    notes: '',
+    isFollowUp: false,
+    followUpDate: 'Next Week',
+    dateObj: new Date(),
+    timeObj: new Date(),
+    followUpObj: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    dob: '',
+    dobObj: new Date(),
+    sys: '',
+    dia: '',
+    pulse: '',
+    spo2: '',
+    weight: '',
+    temp: '',
+    tempUnit: 'C'
+});
 
 export default function AppointmentScreen({ theme, onBack, form, setForm, appointments, setAppointments, patients, setPatients, onSelectPatient, onEditAppointment, viewMode, setViewMode, showToast, styles }) {
     const insets = useSafeAreaInsets();
@@ -32,7 +56,7 @@ export default function AppointmentScreen({ theme, onBack, form, setForm, appoin
     };
 
     const resetForm = () => {
-        setForm(INITIAL_FORM_STATE);
+        setForm(createInitialFormState());
         setPatientSearch('');
     };
 
@@ -310,7 +334,7 @@ export default function AppointmentScreen({ theme, onBack, form, setForm, appoin
                                 <ClipboardList size={40} color={theme.textDim} />
                             </View>
                             <Text style={{ fontSize: 20, fontWeight: '900', color: theme.text }}>No Upcoming Appointments</Text>
-                            <Text style={{ color: theme.textDim, fontSize: 15, marginTop: 8 }}>Click the '+' icon to add a new booking.</Text>
+                            <Text style={{ color: theme.textDim, fontSize: 15, marginTop: 8 }}>Click the &apos;+&apos; icon to add a new booking.</Text>
                         </View>
                     )}
                 </ScrollView>
@@ -509,7 +533,7 @@ export default function AppointmentScreen({ theme, onBack, form, setForm, appoin
                     <View>
                         <Text style={{ color: theme.textDim, marginBottom: 8, fontWeight: '700', fontSize: 13 }}>Booking Notes</Text>
                         <View style={{ backgroundColor: theme.inputBg, borderWidth: 1, borderColor: theme.border, borderRadius: 18, padding: 16, minHeight: 120 }}>
-                            <TextInput style={{ color: theme.text, fontSize: 15, fontWeight: '500', width: '100%', textAlignVertical: 'top', flex: 1 }} value={form.notes} onChangeText={(t) => setForm({ ...form, notes: t })} placeholder="Type complaints, visit reason, or doctor's notes here..." placeholderTextColor={theme.textDim} multiline />
+                    <TextInput style={{ color: theme.text, fontSize: 15, fontWeight: '500', width: '100%', textAlignVertical: 'top', flex: 1 }} value={form.notes} onChangeText={(t) => setForm({ ...form, notes: t })} placeholder="Type complaints, visit reason, or doctor&apos;s notes here..." placeholderTextColor={theme.textDim} multiline />
                         </View>
                     </View>
                 </View>

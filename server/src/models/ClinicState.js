@@ -1,4 +1,11 @@
 import mongoose from 'mongoose';
+import {
+  appointmentSchema,
+  inventoryMedicineSchema,
+  patientSchema,
+  procedureSchema,
+  templateSchema
+} from './schemas.js';
 
 const { Schema } = mongoose;
 
@@ -11,23 +18,23 @@ const clinicStateSchema = new Schema(
       default: 'primary'
     },
     appointments: {
-      type: [Schema.Types.Mixed],
+      type: [appointmentSchema],
       default: []
     },
     patients: {
-      type: [Schema.Types.Mixed],
+      type: [patientSchema],
       default: []
     },
     medicines: {
-      type: [Schema.Types.Mixed],
+      type: [inventoryMedicineSchema],
       default: []
     },
     templates: {
-      type: [Schema.Types.Mixed],
+      type: [templateSchema],
       default: []
     },
     procedures: {
-      type: [Schema.Types.Mixed],
+      type: [procedureSchema],
       default: []
     }
   },

@@ -109,10 +109,9 @@ export default function LoginScreen() {
               <Text style={styles.subTitle}>Healthcare Intelligence Portal</Text>
             </View>
 
-            <View style={styles.mainCard}>
-              
+            <View style={[styles.mainCard, { position: 'relative' }]}> 
               {/* CUSTOM ROLE DROPDOWN */}
-              <View style={styles.inputGroup}>
+              <View style={styles.inputGroup}> 
                 <Text style={styles.inputLabel}>Access Role</Text>
                 <TouchableOpacity 
                   activeOpacity={1} 
@@ -127,87 +126,86 @@ export default function LoginScreen() {
                   </View>
                   <ChevronDown size={20} color="#94a3b8" style={{ transform: [{ rotate: isDropdownOpen ? '180deg' : '0deg' }] }} />
                 </TouchableOpacity>
-
-                {isDropdownOpen && (
-                  <View style={styles.dropdownMenu}>
-                    {ROLE_OPTIONS.map((item) => (
-                      <TouchableOpacity 
-                        key={item.value} 
-                        style={styles.dropdownItem}
-                        onPress={() => {
-                          setSelectedRole(item.value);
-                          setIsDropdownOpen(false);
-                        }}
-                      >
-                        <View style={styles.roleInfo}>
-                          {getRoleIcon(item.value, selectedRole === item.value ? '#6366f1' : '#94a3b8', 18)}
-                          <Text style={[styles.itemText, selectedRole === item.value && styles.itemTextActive]}>
-                            {item.label}
-                          </Text>
-                        </View>
-                        {selectedRole === item.value && <Check size={16} color="#6366f1" strokeWidth={3} />}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
               </View>
 
-              {/* FORM SECTION */}
-              {!isDropdownOpen && (
-                <View style={styles.formSection}>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Username</Text>
-                    <View style={[styles.inputField, focusedInput === 'user' && styles.inputFieldFocused]}>
-                      <User size={20} color={focusedInput === 'user' ? '#6366f1' : '#94a3b8'} />
-                      <TextInput
-                        style={styles.textInput}
-                        placeholder={getRolePlaceholder()}
-                        placeholderTextColor="#cbd5e1"
-                        value={username}
-                        onChangeText={setUsername}
-                        onFocus={() => setFocusedInput('user')}
-                        onBlur={() => setFocusedInput(null)}
-                        autoCapitalize="none"
-                      />
-                    </View>
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Password</Text>
-                    <View style={[styles.inputField, focusedInput === 'pass' && styles.inputFieldFocused]}>
-                      <Lock size={20} color={focusedInput === 'pass' ? '#6366f1' : '#94a3b8'} />
-                      <TextInput
-                        style={styles.textInput}
-                        placeholder="••••••••"
-                        placeholderTextColor="#cbd5e1"
-                        secureTextEntry={!showPassword}
-                        value={password}
-                        onChangeText={setPassword}
-                        onFocus={() => setFocusedInput('pass')}
-                        onBlur={() => setFocusedInput(null)}
-                      />
-                      <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                        {showPassword ? <EyeOff size={20} color="#94a3b8" /> : <Eye size={20} color="#6366f1" />}
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-                  <TouchableOpacity onPress={handleLogin} disabled={loading} activeOpacity={0.8} style={styles.loginBtnWrapper}>
-                    <LinearGradient colors={['#6366f1', '#a855f7']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.loginBtn}>
-                      {loading ? (
-                        <ActivityIndicator color="#fff" />
-                      ) : (
-                        <View style={styles.btnContent}>
-                          <Text style={styles.btnText}>Login Securely</Text>
-                          <ArrowRight size={20} color="#fff" strokeWidth={2.5} />
-                        </View>
-                      )}
-                    </LinearGradient>
-                  </TouchableOpacity>
+              {/* DROPDOWN ABSOLUTELY OVERLAPPING THE CARD */}
+              {isDropdownOpen && (
+                <View style={[styles.dropdownMenu, { position: 'absolute', top: 32, left: 20, right: 20, zIndex: 100 }]}> 
+                  {ROLE_OPTIONS.map((item) => (
+                    <TouchableOpacity 
+                      key={item.value} 
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setSelectedRole(item.value);
+                        setIsDropdownOpen(false);
+                      }}
+                    >
+                      <View style={styles.roleInfo}>
+                        {getRoleIcon(item.value, selectedRole === item.value ? '#6366f1' : '#94a3b8', 18)}
+                        <Text style={[styles.itemText, selectedRole === item.value && styles.itemTextActive]}>
+                          {item.label}
+                        </Text>
+                      </View>
+                      {selectedRole === item.value && <Check size={16} color="#6366f1" strokeWidth={3} />}
+                    </TouchableOpacity>
+                  ))}
                 </View>
               )}
+
+              {/* FORM SECTION */}
+              <View style={[styles.formSection, isDropdownOpen && { opacity: 0.3 }]}> 
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Username</Text>
+                  <View style={[styles.inputField, focusedInput === 'user' && styles.inputFieldFocused]}>
+                    <User size={20} color={focusedInput === 'user' ? '#6366f1' : '#94a3b8'} />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder={getRolePlaceholder()}
+                      placeholderTextColor="#cbd5e1"
+                      value={username}
+                      onChangeText={setUsername}
+                      onFocus={() => setFocusedInput('user')}
+                      onBlur={() => setFocusedInput(null)}
+                      autoCapitalize="none"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Password</Text>
+                  <View style={[styles.inputField, focusedInput === 'pass' && styles.inputFieldFocused]}>
+                    <Lock size={20} color={focusedInput === 'pass' ? '#6366f1' : '#94a3b8'} />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="••••••••"
+                      placeholderTextColor="#cbd5e1"
+                      secureTextEntry={!showPassword}
+                      value={password}
+                      onChangeText={setPassword}
+                      onFocus={() => setFocusedInput('pass')}
+                      onBlur={() => setFocusedInput(null)}
+                    />
+                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                      {showPassword ? <EyeOff size={20} color="#94a3b8" /> : <Eye size={20} color="#6366f1" />}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+                <TouchableOpacity onPress={handleLogin} disabled={loading} activeOpacity={0.8} style={styles.loginBtnWrapper}>
+                  <LinearGradient colors={['#6366f1', '#a855f7']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.loginBtn}>
+                    {loading ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <View style={styles.btnContent}>
+                        <Text style={styles.btnText}>Login Securely</Text>
+                        <ArrowRight size={20} color="#fff" strokeWidth={2.5} />
+                      </View>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
             </View>
 
             <Text style={styles.footerNote}>Enterprise-grade Security Verified</Text>
@@ -250,14 +248,15 @@ const styles = StyleSheet.create({
   dropdownMenu: {
     backgroundColor: '#fff',
     borderRadius: 18,
-    marginTop: 8,
+    marginTop: 0,
     padding: 8,
     borderWidth: 1.5,
     borderColor: '#f1f5f9',
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 10,
-    elevation: 5,
+    elevation: 10,
+    // position, top, left, right, zIndex are set inline
   },
   dropdownItem: {
     flexDirection: 'row',

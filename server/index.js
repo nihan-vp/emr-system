@@ -3,8 +3,14 @@ import cors from 'cors';
 
 import { connectToDatabase } from './src/config/db.js';
 import { env } from './src/config/env.js';
+import appointmentsRoutes from './src/routes/appointmentsRoutes.js';
 import clinicStateRoutes from './src/routes/clinicStateRoutes.js';
+import labRoutes from './src/routes/labRoutes.js';
+import medicinesRoutes from './src/routes/medicinesRoutes.js';
+import patientsRoutes from './src/routes/patientsRoutes.js';
 import pdfRoutes from './src/routes/pdfRoutes.js';
+import proceduresRoutes from './src/routes/proceduresRoutes.js';
+import templatesRoutes from './src/routes/templatesRoutes.js';
 
 const app = express();
 
@@ -23,6 +29,12 @@ app.get('/', (_req, res) => {
 
 // Routes
 app.use('/api', clinicStateRoutes);
+app.use('/api/appointments', appointmentsRoutes);
+app.use('/api/patients', patientsRoutes);
+app.use('/api/medicines', medicinesRoutes);
+app.use('/api/templates', templatesRoutes);
+app.use('/api/procedures', proceduresRoutes);
+app.use('/api/lab', labRoutes);
 app.use('/api/pdf', pdfRoutes);
 
 // Error handler

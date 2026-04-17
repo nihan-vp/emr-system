@@ -114,16 +114,22 @@ export default function PatientScreen({ theme, onBack, patients, setPatients, se
             Alert.alert('Required', 'Please enter Patient Name and Mobile Number.');
             return;
         }
-        const timestamp = Date.now();
+        // Generate a unique 4-digit patient ID
+        let newId;
+        const usedIds = new Set(patients.map((p) => p.id));
+        do {
+            newId = Math.floor(1000 + Math.random() * 9000); // 4-digit number
+        } while (usedIds.has(newId));
+
         const initialVitals = hasVitalsData(newPatient.vitals)
             ? [{
-                id: timestamp + 1,
+                id: Date.now() + 1,
                 date: new Date().toISOString(),
                 ...newPatient.vitals
             }]
             : [];
         const createdPatient = {
-            id: timestamp,
+            id: newId,
             name: newPatient.name,
             mobile: newPatient.mobile,
             email: newPatient.email,

@@ -1,23 +1,8 @@
 import mongoose from 'mongoose';
 
-import { ClinicState } from '../models/ClinicState.js';
-import { defaultClinicState, ensureClinicState, resetClinicState } from '../seed/defaultClinicState.js';
-
-const editableCollections = new Set(Object.keys(defaultClinicState));
-
-const sanitizeState = (stateDocument) => {
-  if (!stateDocument) {
-    return null;
-  }
-
-  return {
-    appointments: stateDocument.appointments || [],
-    patients: stateDocument.patients || [],
-    medicines: stateDocument.medicines || [],
-    templates: stateDocument.templates || [],
-    procedures: stateDocument.procedures || []
-  };
-};
+import { replaceCollection, sanitizeClinicState } from '../repositories/clinicStateRepository.js';
+import { resetClinicState } from '../seed/defaultClinicState.js';
+import { editableCollections, getClinicStateSnapshot } from '../repositories/clinicStateRepository.js';
 
 export const getHealth = (_request, response) => {
   const readyStateMap = {
@@ -34,11 +19,11 @@ export const getHealth = (_request, response) => {
 };
 
 export const getClinicState = async (_request, response) => {
-  const state = await ensureClinicState();
+  const state = await getClinicStateSnapshot();
 
   response.json({
     ok: true,
-    data: sanitizeState(state)
+    data: state
   });
 };
 
@@ -60,19 +45,13 @@ export const replaceClinicCollection = async (request, response) => {
     });
   }
 
-  await ensureClinicState();
-
-  const updatedState = await ClinicState.findOneAndUpdate(
-    { stateKey: 'primary' },
-    { $set: { [collection]: items } },
-    { new: true }
-  ).lean();
+  const updatedItems = await replaceCollection(collection, items);
 
   return response.json({
     ok: true,
     data: {
       collection,
-      items: updatedState?.[collection] || []
+      items: updatedItems
     }
   });
 };
@@ -82,6 +61,6 @@ export const resetClinicCollections = async (_request, response) => {
 
   response.json({
     ok: true,
-    data: sanitizeState(state)
+    data: sanitizeClinicState(state)
   });
 };

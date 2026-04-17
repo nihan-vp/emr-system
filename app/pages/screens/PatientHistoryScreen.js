@@ -1,21 +1,19 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
-    ArrowLeft, Clipboard, FilePlus, HeartPulse, Phone, 
-    Search, Stethoscope, FileText, Download, Activity, 
+    ArrowLeft, Clipboard, FilePlus, HeartPulse,
+    Search, FileText, Download, Activity, 
     FileType, ActivitySquare, UserX, X, Edit, Trash2, Eye, Share2, Printer
 } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { 
     ScrollView, Text, TextInput, TouchableOpacity, 
-    View, Animated, Easing, StyleSheet, Alert, Dimensions, Modal, Platform
+    View, Animated, Easing, StyleSheet, Alert, Modal
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
-import * as FileSystem from 'expo-file-system';
-
-const { width, height } = Dimensions.get('window');
 
 // --- Utility Functions ---
 const formatDateTime = (dateLike) => {
@@ -54,7 +52,7 @@ const buildPatientTimeline = (patient) => {
 
     const rxEntries = (patient?.rxHistory ||[]).map((item) => ({
         id: `r-${item.id || Math.random().toString(36).slice(2)}`,
-        type: 'prescription', date: item.date, payload: item
+        type: 'prescription', date: resolvePrescriptionDate(item), payload: item
     }));
 
     return[...vitalsEntries, ...rxEntries]
@@ -65,6 +63,77 @@ const normalizeNameList = (items) => (items ||[])
     .map((item) => (typeof item === 'string' ? item : item?.name))
     .map((item) => String(item || '').trim())
     .filter(Boolean);
+
+const getUploadedLabReports = (rx = {}) => (rx?.nextVisitInvestigations || [])
+    .filter((item) => item?.report?.uploadedAt)
+    .map((item) => ({
+        testName: item?.name || 'Lab Test',
+        fileName: item?.report?.fileName || 'Lab Report',
+        uploadedAt: item?.report?.uploadedAt || null,
+        mimeType: item?.report?.mimeType || 'application/octet-stream',
+        dataUri: item?.report?.dataUri || '',
+        base64: item?.report?.base64 || '',
+        }));
+
+const buildLabReportPreviewHtml = (report = {}) => {
+    const safeTitle = toDisplayText(report?.fileName || 'Lab Report', 'Lab Report');
+    const mimeType = String(report?.mimeType || '');
+    const dataUri = report?.dataUri || '';
+
+    if (!dataUri) {
+        return `
+            <html>
+                <body style="margin:0;font-family:Arial,Helvetica,sans-serif;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh;">
+                    <div style="text-align:center;padding:24px;">
+                        <h2 style="margin-bottom:8px;">No Preview Available</h2>
+                        <p>The lab report is missing its file content.</p>
+                    </div>
+                </body>
+            </html>
+        `;
+    }
+
+    if (mimeType.startsWith('image/')) {
+        return `
+            <html>
+                <body style="margin:0;background:#0f172a;display:flex;align-items:center;justify-content:center;min-height:100vh;">
+                    <img src="${dataUri}" alt="${safeTitle}" style="max-width:100%;max-height:100vh;object-fit:contain;" />
+                </body>
+            </html>
+        `;
+    }
+
+    return `
+        <html>
+            <body style="margin:0;background:#0f172a;">
+                <iframe src="${dataUri}" title="${safeTitle}" style="border:0;width:100%;height:100vh;"></iframe>
+            </body>
+        </html>
+    `;
+};
+
+const resolvePrescriptionPatient = (rx, fallbackPatient = null) => {
+    if (rx?.patient) {
+        return rx.patient;
+    }
+
+    if (fallbackPatient) {
+        return fallbackPatient;
+    }
+
+    if (rx?.patientSnapshot) {
+        return rx.patientSnapshot;
+    }
+
+    return {};
+};
+
+const resolvePrescriptionPatientId = (rx, fallbackPatient = null) => {
+    const patient = resolvePrescriptionPatient(rx, fallbackPatient);
+    return patient?.id ?? rx?.patientSnapshot?.id ?? null;
+};
+
+const resolvePrescriptionDate = (rx) => rx?.date || rx?.updatedAt || rx?.createdAt || null;
 
 // --- Custom Animation Wrapper ---
 const FadeInUp = ({ delay = 0, children, style }) => {
@@ -104,6 +173,7 @@ export default function PatientHistoryScreen({
     
     // Modal State for Full Screen Document Viewer
     const [previewRx, setPreviewRx] = useState(null);
+    const [previewLabReport, setPreviewLabReport] = useState(null);
 
     // SweetAlert-style confirmation for WhatsApp share
     const [confirmShareVisible, setConfirmShareVisible] = useState(false);
@@ -134,7 +204,7 @@ export default function PatientHistoryScreen({
     const allPrescriptions = useMemo(() => {
         return filteredPatients.flatMap(p => 
             (p.rxHistory ||[]).map(rx => ({ ...rx, patient: p }))
-        ).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+        ).sort((a, b) => new Date(resolvePrescriptionDate(b) || 0).getTime() - new Date(resolvePrescriptionDate(a) || 0).getTime());
     },[filteredPatients]);
 
     const timeline = useMemo(() => buildPatientTimeline(selectedPatient), [selectedPatient]);
@@ -152,7 +222,8 @@ export default function PatientHistoryScreen({
                 } else {
                     const r = entry.payload;
                     const meds = (r.medicines ||[]).map(m => `<li>${m.name} ${m.dosage ? '- ' + m.dosage : ''}</li>`).join('');
-                    return `<div class="card rx-card"><div class="header"><h3>💜 Prescription (Rx)</h3><span>${dateStr}</span></div><div class="diagnosis"><strong>Diagnosis:</strong> ${r.diagnosis || 'None listed'}</div>${meds ? `<strong>Medicines:</strong><ul>${meds}</ul>` : ''}${r.advice ? `<div style="margin-top:10px;"><strong>Advice:</strong> ${r.advice}</div>` : ''}</div>`;
+                    const reports = getUploadedLabReports(r).map((item) => `<li>${item.testName}: ${item.fileName}</li>`).join('');
+                    return `<div class="card rx-card"><div class="header"><h3>💜 Prescription (Rx)</h3><span>${dateStr}</span></div><div class="diagnosis"><strong>Diagnosis:</strong> ${r.diagnosis || 'None listed'}</div>${meds ? `<strong>Medicines:</strong><ul>${meds}</ul>` : ''}${reports ? `<strong>Lab Reports:</strong><ul>${reports}</ul>` : ''}${r.advice ? `<div style="margin-top:10px;"><strong>Advice:</strong> ${r.advice}</div>` : ''}</div>`;
                 }
             }).join('');
 
@@ -201,7 +272,7 @@ export default function PatientHistoryScreen({
             if (typeof showToast === 'function') {
                 showToast('Shared', 'Patient history PDF share opened.', 'success');
             }
-        } catch (error) {
+        } catch (_error) {
             Alert.alert('Error', 'Could not generate PDF.');
         } finally {
             setIsGeneratingPDF(false);
@@ -210,8 +281,8 @@ export default function PatientHistoryScreen({
 
     // --- OLD PRESCRIPTION LAYOUT WITH EXACT 1-PAGE FIX AND PERFECT MOBILE SCALING ---
     const getPrescriptionHTML = (rx) => {
-        const patient = rx.patient || selectedPatient || {};
-        const dateObj = new Date(rx.date || Date.now());
+        const patient = resolvePrescriptionPatient(rx, selectedPatient);
+        const dateObj = new Date(resolvePrescriptionDate(rx) || Date.now());
         const dateStr = dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
         const vitals = Array.isArray(patient?.vitalsHistory)
@@ -221,17 +292,18 @@ export default function PatientHistoryScreen({
         const genderLabel = patient?.gender === 'M' ? 'Male' : patient?.gender === 'F' ? 'Female' : toDisplayText(patient?.gender || '', 'Other');
         const patientName = toDisplayText(patient?.name || 'Unknown Patient', 'Unknown Patient').toUpperCase();
         const patientId = toDisplayText(patient?.id, 'N/A');
-        const bookingNumber = toDisplayText(patient?.bookingNo || patient?.bookingNumber || patient?.id || 'N/A', 'N/A');
+        const bookingNumber = toDisplayText(patient?.bookingNo || patient?.bookingNumber || patient?.id || rx?.id || 'N/A', 'N/A');
         const mobile = toDisplayText(patient?.mobile || 'N/A', 'N/A');
         const age = toDisplayText(patient?.age || '-', '-');
 
         const diagnosis = toDisplayText(rx?.diagnosis || '', '-');
-        const bookingNotes = toDisplayText(rx?.bookingNotes || patient?.bookingNotes || patient?.notes || '', '-');
+        const bookingNotes = toDisplayText(rx?.bookingNotes || rx?.templateName || patient?.bookingNotes || patient?.notes || '', '-');
         const additionalNotes = toDisplayText(rx?.advice || '', '-');
         const labNotes = toDisplayText(rx?.labNotes || '', '-');
 
         const procedures = (rx?.procedures ||[]).map((item) => (typeof item === 'string' ? item : item?.name)).map((item) => String(item || '').trim()).filter(Boolean);
         const investigations = (rx?.nextVisitInvestigations ||[]).map((item) => (typeof item === 'string' ? item : item?.name)).map((item) => String(item || '').trim()).filter(Boolean);
+        const uploadedReports = getUploadedLabReports(rx);
         const referral = toDisplayText(rx?.referral || '', '-');
 
         const medsRows = (rx?.medicines ||[]).map((m, index) => {
@@ -255,6 +327,7 @@ export default function PatientHistoryScreen({
 
         const procedureItems = procedures.length > 0 ? procedures.map((item) => `<li>${toDisplayText(item)}</li>`).join('') : '';
         const investigationItems = investigations.length > 0 ? investigations.map((item) => `<li>${toDisplayText(item)}</li>`).join('') : '';
+        const reportItems = uploadedReports.length > 0 ? uploadedReports.map((item) => `<li>${toDisplayText(item.testName)}: ${toDisplayText(item.fileName)}</li>`).join('') : '';
 
         return `
 <!DOCTYPE html>
@@ -467,6 +540,13 @@ export default function PatientHistoryScreen({
                     </div>
                 ` : ''}
 
+                ${uploadedReports.length > 0 ? `
+                    <div class="notes-block">
+                        <div class="notes-label">Uploaded Lab Reports:</div>
+                        <ul class="notes-list">${reportItems}</ul>
+                    </div>
+                ` : ''}
+
                 ${referral && referral !== '-' ? `
                     <div class="notes-block">
                         <div class="notes-label">Referral:</div>
@@ -499,34 +579,13 @@ export default function PatientHistoryScreen({
         try {
             setIsGeneratingPDF(true);
             const html = getPrescriptionHTML(rx);
-            const patient = rx.patient || selectedPatient || {};
-            const rawName = String(patient.name || 'Prescription').trim();
-            const safeBaseName = rawName || 'Prescription';
-            const sanitizedFileName = (safeBaseName
-                .replace(/[^a-z0-9_\- ]+/gi, '')
-                .replace(/\s+/g, '_')
-                .slice(0, 60) || 'Prescription') + '.pdf';
-
             const { uri } = await Print.printToFileAsync({ html, base64: false });
-
-            // Move/rename file so external apps (WhatsApp, Files, etc.) see patient name
-            const newUri = FileSystem.documentDirectory
-                ? FileSystem.documentDirectory + sanitizedFileName
-                : uri;
-
-            if (FileSystem.documentDirectory) {
-                try {
-                    await FileSystem.moveAsync({ from: uri, to: newUri });
-                } catch (e) {
-                    // If move fails, fall back to original uri
-                }
-            }
-            await Sharing.shareAsync(newUri, { mimeType: 'application/pdf', dialogTitle: 'Share Prescription PDF' });
+            await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Share Prescription PDF' });
 
             if (typeof showToast === 'function') {
                 showToast('Shared', 'Prescription PDF share opened.', 'success');
             }
-        } catch (error) {
+        } catch (_error) {
             Alert.alert('Error', 'Could not generate Prescription PDF.');
         } finally {
             setIsGeneratingPDF(false);
@@ -538,7 +597,7 @@ export default function PatientHistoryScreen({
             setIsGeneratingPDF(true);
             const html = getPrescriptionHTML(rx);
             await Print.printAsync({ html });
-        } catch (error) {
+        } catch (_error) {
             Alert.alert('Error', 'Could not print Prescription.');
         } finally {
             setIsGeneratingPDF(false);
@@ -550,6 +609,33 @@ export default function PatientHistoryScreen({
         setConfirmShareVisible(true);
     };
 
+    const handleShareLabReport = async (report) => {
+        if (!report?.base64) {
+            Alert.alert('Unavailable', 'This lab report file is not available for sharing.');
+            return;
+        }
+
+        try {
+            setIsGeneratingPDF(true);
+            const sanitizedFileName = (String(report.fileName || 'Lab_Report')
+                .replace(/[^a-z0-9_\-. ]+/gi, '')
+                .replace(/\s+/g, '_')
+                .slice(0, 80) || 'Lab_Report');
+            const fileUri = `${FileSystem.cacheDirectory || FileSystem.documentDirectory}${sanitizedFileName}`;
+            await FileSystem.writeAsStringAsync(fileUri, report.base64, {
+                encoding: FileSystem.EncodingType.Base64,
+            });
+            await Sharing.shareAsync(fileUri, {
+                mimeType: report.mimeType || 'application/octet-stream',
+                dialogTitle: 'Share Lab Report',
+            });
+        } catch (_error) {
+            Alert.alert('Share Failed', 'Could not prepare the lab report for sharing.');
+        } finally {
+            setIsGeneratingPDF(false);
+        }
+    };
+
     const confirmShareWhatsappNow = async () => {
         if (!confirmShareRx) {
             setConfirmShareVisible(false);
@@ -557,34 +643,12 @@ export default function PatientHistoryScreen({
         }
 
         const rx = confirmShareRx;
-        const patient = rx.patient || selectedPatient || {};
-        const patientName = patient?.name || 'Unknown Patient';
         try {
             setIsGeneratingPDF(true);
             const html = getPrescriptionHTML(rx);
 
-            const rawName = String(patientName || 'Prescription').trim();
-            const safeBaseName = rawName || 'Prescription';
-            const sanitizedFileName = (safeBaseName
-                .replace(/[^a-z0-9_\- ]+/gi, '')
-                .replace(/\s+/g, '_')
-                .slice(0, 60) || 'Prescription') + '.pdf';
-
             const { uri } = await Print.printToFileAsync({ html, base64: false });
-
-            const newUri = FileSystem.documentDirectory
-                ? FileSystem.documentDirectory + sanitizedFileName
-                : uri;
-
-            if (FileSystem.documentDirectory) {
-                try {
-                    await FileSystem.moveAsync({ from: uri, to: newUri });
-                } catch (e) {
-                    // ignore and use original uri
-                }
-            }
-
-            await Sharing.shareAsync(newUri, {
+            await Sharing.shareAsync(uri, {
                 mimeType: 'application/pdf',
                 dialogTitle: 'Share Prescription PDF',
             });
@@ -592,7 +656,7 @@ export default function PatientHistoryScreen({
             if (typeof showToast === 'function') {
                 showToast('Shared', 'Prescription PDF ready to send via WhatsApp.', 'success');
             }
-        } catch (error) {
+        } catch (_error) {
             Alert.alert('Error', 'Could not prepare Prescription PDF for sharing.');
         } finally {
             setIsGeneratingPDF(false);
@@ -621,7 +685,7 @@ export default function PatientHistoryScreen({
             </LinearGradient>
             <Text style={[localStyles.emptySearchTitle, { color: theme.text }]}>No Results Found</Text>
             <Text style={[localStyles.emptySearchSub, { color: theme.textDim }]}>
-                We couldn't find any match. Please check the spelling or try a different ID/Number.
+                We couldn&apos;t find any match. Please check the spelling or try a different ID/Number.
             </Text>
             <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.8}>
                 <LinearGradient colors={['#f43f5e', '#e11d48']} style={localStyles.clearSearchBtn}>
@@ -667,14 +731,20 @@ export default function PatientHistoryScreen({
                     allPrescriptions.length === 0 ? renderEmptySearch() : allPrescriptions.map((rx, index) => (
                         <FadeInUp key={rx.id} delay={index * 100}>
                             <View style={[localStyles.timelineCard, { marginTop: 16, marginLeft: 0, borderColor: theme.border, backgroundColor: theme.cardBg, borderLeftWidth: 4, borderLeftColor: '#d946ef' }]}>
+                                {(() => {
+                                    const patient = resolvePrescriptionPatient(rx);
+                                    const patientId = resolvePrescriptionPatientId(rx);
+
+                                    return (
+                                        <>
                                 <View style={localStyles.timelineCardHeader}>
                                     <View>
                                         <Text style={{ color: '#db2777', fontWeight: '800', fontSize: 14 }}>PRESCRIPTION (Rx)</Text>
-                                        <TouchableOpacity onPress={() => { setSelectedId(rx.patient.id); setActiveTab('timeline'); }}>
-                                            <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700', marginTop: 4 }}>{rx.patient?.name}</Text>
+                                        <TouchableOpacity disabled={!patientId} onPress={() => { if (patientId) { setSelectedId(patientId); setActiveTab('timeline'); } }}>
+                                            <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700', marginTop: 4 }}>{patient?.name || 'Unknown Patient'}</Text>
                                         </TouchableOpacity>
                                     </View>
-                                    <Text style={{ color: theme.textDim, fontSize: 12, fontWeight: '600' }}>{formatDateTime(rx.date)}</Text>
+                                    <Text style={{ color: theme.textDim, fontSize: 12, fontWeight: '600' }}>{formatDateTime(resolvePrescriptionDate(rx))}</Text>
                                 </View>
                                 <View>
                                     <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700', marginBottom: 10 }}>{rx.diagnosis || 'General Diagnosis'}</Text>
@@ -683,16 +753,35 @@ export default function PatientHistoryScreen({
                                             Procedures/Services: {normalizeNameList(rx.procedures).join(', ')}
                                         </Text>
                                     )}
-                                    {normalizeNameList(rx.nextVisitInvestigations).length > 0 && (
-                                        <Text style={{ color: theme.textDim, fontSize: 13, marginBottom: 4 }} numberOfLines={2}>
-                                            Investigation On Next Visit: {normalizeNameList(rx.nextVisitInvestigations).join(', ')}
-                                        </Text>
+                                {normalizeNameList(rx.nextVisitInvestigations).length > 0 && (
+                                    <Text style={{ color: theme.textDim, fontSize: 13, marginBottom: 4 }} numberOfLines={2}>
+                                        Investigation On Next Visit: {normalizeNameList(rx.nextVisitInvestigations).join(', ')}
+                                    </Text>
+                                )}
+                                    {getUploadedLabReports(rx).length > 0 && (
+                                        <View style={{ marginBottom: 6 }}>
+                                            <Text style={{ color: '#166534', fontSize: 13, marginBottom: 4 }} numberOfLines={2}>
+                                                Lab Reports: {getUploadedLabReports(rx).map((item) => item.fileName).join(', ')}
+                                            </Text>
+                                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                                {getUploadedLabReports(rx).map((report, reportIndex) => (
+                                                    <TouchableOpacity
+                                                        key={`${rx.id}-report-${reportIndex}`}
+                                                        onPress={() => setPreviewLabReport(report)}
+                                                        style={[localStyles.rxActionBtn, { backgroundColor: theme.mode === 'dark' ? 'rgba(22,101,52,0.2)' : '#dcfce7', paddingHorizontal: 10, paddingVertical: 8 }]}
+                                                    >
+                                                        <FileText size={14} color="#166534" />
+                                                        <Text style={{ color: '#166534', fontSize: 12, fontWeight: '700', marginLeft: 6 }}>View Report</Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </View>
+                                        </View>
                                     )}
-                                    {!!rx.referral && (
-                                        <Text style={{ color: theme.textDim, fontSize: 13, marginBottom: 4 }} numberOfLines={2}>
-                                            Referral: {rx.referral}
-                                        </Text>
-                                    )}
+                                {!!rx.referral && (
+                                    <Text style={{ color: theme.textDim, fontSize: 13, marginBottom: 4 }} numberOfLines={2}>
+                                        Referral: {rx.referral}
+                                    </Text>
+                                )}
                                     {!!rx.advice && (
                                         <Text style={{ color: theme.textDim, fontSize: 13, marginBottom: 6 }} numberOfLines={2}>
                                             Advice: {rx.advice}
@@ -711,14 +800,17 @@ export default function PatientHistoryScreen({
                                             <Text style={{ color: theme.primary, fontSize: 13, fontWeight: '700', marginLeft: 6 }}>Open Rx View</Text>
                                         </TouchableOpacity>
                                         <View style={{ flex: 1 }} />
-                                        <TouchableOpacity style={[localStyles.rxActionBtn, { backgroundColor: theme.mode === 'dark' ? 'rgba(234,179,8,0.1)' : '#fefce8' }]} onPress={() => onEditRx && onEditRx(rx.patient.id, rx)}>
+                                        <TouchableOpacity disabled={!patientId} style={[localStyles.rxActionBtn, { backgroundColor: theme.mode === 'dark' ? 'rgba(234,179,8,0.1)' : '#fefce8', opacity: patientId ? 1 : 0.5 }]} onPress={() => patientId && onEditRx && onEditRx(patientId, rx)}>
                                             <Edit size={16} color="#eab308" />
                                         </TouchableOpacity>
-                                        <TouchableOpacity style={[localStyles.rxActionBtn, { backgroundColor: theme.mode === 'dark' ? 'rgba(239,68,68,0.1)' : '#fef2f2' }]} onPress={() => onDeleteRx && onDeleteRx(rx.patient.id, rx.id)}>
+                                        <TouchableOpacity disabled={!patientId} style={[localStyles.rxActionBtn, { backgroundColor: theme.mode === 'dark' ? 'rgba(239,68,68,0.1)' : '#fef2f2', opacity: patientId ? 1 : 0.5 }]} onPress={() => patientId && onDeleteRx && onDeleteRx(patientId, rx.id)}>
                                             <Trash2 size={16} color="#ef4444" />
                                         </TouchableOpacity>
                                     </View>
                                 </View>
+                                        </>
+                                    );
+                                })()}
                             </View>
                         </FadeInUp>
                     ))
@@ -866,6 +958,25 @@ export default function PatientHistoryScreen({
                                     <Text style={{ color: theme.textDim, fontSize: 13, marginBottom: 4 }} numberOfLines={2}>
                                         Investigation On Next Visit: {normalizeNameList(item.nextVisitInvestigations).join(', ')}
                                     </Text>
+                                )}
+                                {getUploadedLabReports(item).length > 0 && (
+                                    <View style={{ marginBottom: 6 }}>
+                                        <Text style={{ color: '#166534', fontSize: 13, marginBottom: 4 }} numberOfLines={2}>
+                                            Lab Reports: {getUploadedLabReports(item).map((report) => report.fileName).join(', ')}
+                                        </Text>
+                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                            {getUploadedLabReports(item).map((report, reportIndex) => (
+                                                <TouchableOpacity
+                                                    key={`${item.id}-report-${reportIndex}`}
+                                                    onPress={() => setPreviewLabReport(report)}
+                                                    style={[localStyles.rxActionBtn, { backgroundColor: theme.mode === 'dark' ? 'rgba(22,101,52,0.2)' : '#dcfce7', paddingHorizontal: 10, paddingVertical: 8 }]}
+                                                >
+                                                    <FileText size={14} color="#166534" />
+                                                    <Text style={{ color: '#166534', fontSize: 12, fontWeight: '700', marginLeft: 6 }}>View Report</Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    </View>
                                 )}
                                 {!!item.referral && (
                                     <Text style={{ color: theme.textDim, fontSize: 13, marginBottom: 4 }} numberOfLines={2}>
@@ -1074,7 +1185,7 @@ export default function PatientHistoryScreen({
                     <View style={[localStyles.confirmCard, { backgroundColor: theme.cardBg, borderColor: theme.border }]}> 
                         <Text style={[localStyles.confirmTitle, { color: theme.text }]}>Are you sure?</Text>
                         <Text style={[localStyles.confirmText, { color: theme.textDim }]}> 
-                            You are about to share this patient's prescription PDF via WhatsApp.
+                            You are about to share this patient&apos;s prescription PDF via WhatsApp.
                         </Text>
                         <View style={localStyles.confirmButtonsRow}>
                             <TouchableOpacity
@@ -1169,6 +1280,49 @@ export default function PatientHistoryScreen({
                             <Text style={localStyles.largeActionText}>Print Rx</Text>
                         </TouchableOpacity>
 
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal
+                visible={!!previewLabReport}
+                animationType="slide"
+                transparent={false}
+                onRequestClose={() => setPreviewLabReport(null)}
+            >
+                <View style={[localStyles.fullScreenModal, { backgroundColor: theme.bg, paddingTop: insets.top }]}>
+                    <View style={[localStyles.modalPageHeader, { borderBottomColor: theme.border }]}>
+                        <TouchableOpacity onPress={() => setPreviewLabReport(null)} style={[localStyles.iconBtn, { backgroundColor: theme.inputBg, borderColor: theme.border }]}>
+                            <X size={24} color={theme.text} />
+                        </TouchableOpacity>
+                        <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 12 }}>
+                            <Text style={{ fontSize: 20, fontWeight: '900', color: theme.text, letterSpacing: 0.5 }}>Lab Report Viewer</Text>
+                            <Text style={{ fontSize: 13, color: theme.textDim, marginTop: 4 }} numberOfLines={1}>{previewLabReport?.fileName || 'Report'}</Text>
+                        </View>
+                        <View style={{ width: 48 }} />
+                    </View>
+
+                    <View style={[localStyles.modalBodyFull, { backgroundColor: theme.mode === 'dark' ? '#0b1220' : '#cbd5e1' }]}>
+                        {previewLabReport && (
+                            <WebView
+                                originWhitelist={['*']}
+                                source={{ html: buildLabReportPreviewHtml(previewLabReport) }}
+                                style={{ flex: 1, backgroundColor: 'transparent' }}
+                                showsVerticalScrollIndicator={false}
+                                javaScriptEnabled={true}
+                            />
+                        )}
+                    </View>
+
+                    <View style={[localStyles.largeBottomBar, { backgroundColor: theme.cardBg, borderTopColor: theme.border, paddingBottom: insets.bottom + 16 }]}>
+                        <TouchableOpacity
+                            style={[localStyles.largeActionCard, { backgroundColor: '#059669' }]}
+                            onPress={() => previewLabReport && handleShareLabReport(previewLabReport)}
+                            activeOpacity={0.8}
+                        >
+                            <Share2 size={26} color="white" />
+                            <Text style={localStyles.largeActionText}>Share Report</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </Modal>

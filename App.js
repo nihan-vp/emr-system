@@ -9,6 +9,8 @@ import DoctorAppScreen from './app/pages/screens/DoctorAppScreen';
 import NurseDashboard from './app/pages/screens/NurseDashboard';
 import LabDashboard from './app/pages/screens/LabDashboard';
 import PharmacyDashboard from './app/pages/screens/PharmacyDashboard';
+import DashboardScreen from './app/pages/screens/DashboardScreen';
+import UploadResultsScreen from './app/pages/screens/UploadResultsScreen';
 
 /**
  * Route names MUST stay exactly: Login, Doctor, Nurse, Lab, Pharmacy
@@ -33,6 +35,8 @@ export default function App() {
             <Stack.Screen name="Nurse" component={NurseDashboard} />
             <Stack.Screen name="Lab" component={LabDashboard} />
             <Stack.Screen name="Pharmacy" component={PharmacyDashboard} />
+            <Stack.Screen name="DashboardScreen" component={DashboardScreen} />
+            <Stack.Screen name="UploadResultsScreen" component={UploadResultsScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

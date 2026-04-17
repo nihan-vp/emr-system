@@ -34,6 +34,8 @@ import SplashScreen from '../components/loaders/SplashScreen';
 import SideMenu from '../components/navbars/SideMenu';
 import { fetchClinicState, replaceClinicCollection } from '../utils/clinicApi';
 import { buildMedicineRecord, findMatchingMedicine, sanitizeMedicineDraft } from '../utils/medicine';
+import { normalizePatientRecord, sanitizePrescriptionDraft, buildPrescriptionRecord } from '../utils/prescription';
+import { buildTemplateRecord, mergeTemplateIntoDraft, sanitizeTemplateDraft } from '../utils/template';
 import AppointmentScreenPage from './screens/AppointmentScreen';
 import DashboardHomePage from './screens/DashboardHomeScreen';
 import LoginPage from './screens/EmbeddedLoginScreen';
@@ -383,7 +385,25 @@ const InputGroup = ({ icon: Icon, label, value, onChange, theme, multiline, keyb
 
 // --- UPDATED TEMPLATE SCREEN ---
 // eslint-disable-next-line no-unused-vars
-const TemplateScreen = ({ theme, onBack, templates, setTemplates, medicines, setMedicines, procedures, setProcedures, showToast, isPrescription = false, patient, onSavePrescription, layout }) => {
+const TemplateScreen = ({
+    theme,
+    onBack,
+    templates,
+    setTemplates,
+    medicines,
+    setMedicines,
+    procedures,
+    setProcedures,
+    showToast,
+    isPrescription = false,
+    patient,
+    patients = [],
+    onSelectPrescriptionPatient,
+    onSavePrescription,
+    initialPrescriptionTemplate = null,
+    onPrescriptionTemplateApplied,
+    layout
+}) => {
     const insets = useSafeAreaInsets();
     const [view, setView] = useState('list'); 
     const [searchQuery, setSearchQuery] = useState('');
@@ -405,6 +425,7 @@ const TemplateScreen = ({ theme, onBack, templates, setTemplates, medicines, set
     // Medicine Picker Modal State
     const [medModalVisible, setMedModalVisible] = useState(false);
     const [medSearch, setMedSearch] = useState('');
+    const [prescriptionPatientSearch, setPrescriptionPatientSearch] = useState('');
 
     // --- PROCEDURE / INVESTIGATION STATES ---
     const [procModalVisible, setProcModalVisible] = useState(false);
@@ -457,20 +478,42 @@ const TemplateScreen = ({ theme, onBack, templates, setTemplates, medicines, set
             setView('edit');
             setEditorForm({ id: null, name: '', diagnosis: '', advice: '', medicines: [], procedures: [], nextVisitInvestigations: [], referral: '' });
             setShowReferral(false);
+            setPrescriptionPatientSearch('');
         }
     }, [isPrescription]);
 
+    useEffect(() => {
+        if (!isPrescription || !initialPrescriptionTemplate) {
+            return;
+        }
+
+        const nextDraft = sanitizePrescriptionDraft(initialPrescriptionTemplate);
+
+        setView('edit');
+        setEditorForm({
+            id: nextDraft.id ?? null,
+            name: nextDraft.templateName || nextDraft.name || '',
+            diagnosis: nextDraft.diagnosis || '',
+            advice: nextDraft.advice || '',
+            medicines: nextDraft.medicines || [],
+            procedures: nextDraft.procedures || [],
+            nextVisitInvestigations: nextDraft.nextVisitInvestigations || [],
+            referral: nextDraft.referral || ''
+        });
+        setShowReferral(Boolean(nextDraft.referral));
+        setSaveAsTemplate(false);
+        onPrescriptionTemplateApplied?.();
+    }, [initialPrescriptionTemplate, isPrescription, onPrescriptionTemplateApplied]);
+
     const applyTemplate = (template) => {
-        setEditorForm(prev => ({
+        const mergedDraft = mergeTemplateIntoDraft(editorForm, template);
+
+        setEditorForm((prev) => ({
             ...prev,
-            diagnosis: template.diagnosis || prev.diagnosis,
-            advice: template.advice || prev.advice,
-            medicines: [...prev.medicines, ...template.medicines],
-            procedures: [...prev.procedures, ...(template.procedures || [])],
-            nextVisitInvestigations: [...prev.nextVisitInvestigations, ...(template.nextVisitInvestigations || [])],
-            referral: template.referral || prev.referral
+            ...mergedDraft,
+            id: prev.id
         }));
-        if(template.referral) setShowReferral(true);
+        if (template.referral) setShowReferral(true);
         setShowTemplatePicker(false);
         showToast('Applied', `${template.name} loaded successfully`, 'info');
     };
@@ -489,6 +532,7 @@ const TemplateScreen = ({ theme, onBack, templates, setTemplates, medicines, set
     const handleCreate = () => {
         setEditorForm({ id: null, name: '', diagnosis: '', advice: '', medicines: [], procedures: [], nextVisitInvestigations: [], referral: '' });
         setShowReferral(false);
+        setSaveAsTemplate(false);
         setView('edit');
     };
 
@@ -496,30 +540,39 @@ const TemplateScreen = ({ theme, onBack, templates, setTemplates, medicines, set
         if (!isPrescription && !editorForm.name) { Alert.alert("Required", "Please enter a Template Name."); return; }
         
         if (isPrescription) {
-            if (editorForm.medicines.length === 0 && !editorForm.advice && editorForm.procedures.length === 0 && editorForm.nextVisitInvestigations.length === 0 && !editorForm.referral) {
+            if (!patient?.id) {
+                Alert.alert("Select Patient", "Please select a patient before saving this prescription.");
+                return;
+            }
+
+            const sanitizedPrescription = sanitizePrescriptionDraft(editorForm);
+
+            if (sanitizedPrescription.medicines.length === 0 && !sanitizedPrescription.advice && sanitizedPrescription.procedures.length === 0 && sanitizedPrescription.nextVisitInvestigations.length === 0 && !sanitizedPrescription.referral) {
                 Alert.alert("Empty", "Please add medicines, procedures, investigations, referral or advice."); return;
             }
             onSavePrescription({
-                ...editorForm,
+                ...sanitizedPrescription,
                 patientId: patient.id,
                 date: new Date().toISOString()
             });
 
-            if (saveAsTemplate && editorForm.name) {
-                 const newTemplate = { ...editorForm, id: Date.now() };
-                 setTemplates([newTemplate, ...templates]);
+            if (saveAsTemplate && sanitizedPrescription.name) {
+                 const newTemplate = buildTemplateRecord(sanitizedPrescription);
+                 setTemplates((prev) => [newTemplate, ...prev]);
                  showToast('Saved', 'Prescription & New Template Saved!', 'success');
             }
             return;
         }
 
+        const normalizedTemplate = buildTemplateRecord(editorForm);
         let updatedTemplates;
-        if (editorForm.id) {
-            updatedTemplates = templates.map(t => t.id === editorForm.id ? editorForm : t);
+        if (normalizedTemplate.id && templates.some((template) => template.id === normalizedTemplate.id)) {
+            updatedTemplates = templates.map((template) => (
+                template.id === normalizedTemplate.id ? normalizedTemplate : template
+            ));
             showToast('Success', 'Template Updated Successfully!', 'success');
         } else {
-            const newTemplate = { ...editorForm, id: Date.now() };
-            updatedTemplates = [newTemplate, ...templates];
+            updatedTemplates = [normalizedTemplate, ...templates];
             showToast('Success', 'New Template Created!', 'success');
         }
         setTemplates(updatedTemplates);
@@ -639,6 +692,20 @@ const TemplateScreen = ({ theme, onBack, templates, setTemplates, medicines, set
         setProcModalVisible(true);
     };
     // --- END PROCEDURE LOGIC ---
+
+    const filteredPrescriptionPatients = patients.filter((item) => {
+        const query = prescriptionPatientSearch.trim().toLowerCase();
+
+        if (!query) {
+            return true;
+        }
+
+        return (
+            String(item.name || '').toLowerCase().includes(query)
+            || String(item.mobile || '').includes(query)
+            || String(item.id || '').toLowerCase().includes(query)
+        );
+    });
 
     const removeMedFromTemplate = (index) => {
         const updated = [...editorForm.medicines];
@@ -879,6 +946,44 @@ const TemplateScreen = ({ theme, onBack, templates, setTemplates, medicines, set
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
             {isPrescription && (
                 <View style={{ marginBottom: 20 }}>
+                    {!patient && (
+                        <View style={{ marginBottom: 18, backgroundColor: theme.cardBg, borderRadius: 20, padding: 16, borderWidth: 1, borderColor: theme.border }}>
+                            <Text style={{ color: theme.text, fontWeight: 'bold', fontSize: 17, marginBottom: 6 }}>Select Patient</Text>
+                            <Text style={{ color: theme.textDim, fontSize: 13, lineHeight: 19, marginBottom: 14 }}>
+                                Choose a patient before saving this prescription to MongoDB.
+                            </Text>
+                            <View style={[styles.inputContainer, { backgroundColor: theme.inputBg, borderColor: theme.border, marginBottom: 12 }]}>
+                                <Search size={18} color={theme.textDim} />
+                                <TextInput
+                                    style={[styles.textInput, { color: theme.text }]}
+                                    value={prescriptionPatientSearch}
+                                    onChangeText={setPrescriptionPatientSearch}
+                                    placeholder="Search by patient name, phone, or ID"
+                                    placeholderTextColor={theme.textDim}
+                                />
+                            </View>
+                            <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} style={{ maxHeight: 220 }}>
+                                {filteredPrescriptionPatients.length > 0 ? filteredPrescriptionPatients.map((item) => (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        onPress={() => onSelectPrescriptionPatient?.(item.id)}
+                                        style={{ paddingVertical: 12, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.inputBg, marginBottom: 10 }}
+                                    >
+                                        <Text style={{ color: theme.text, fontWeight: '700', fontSize: 15 }}>{item.name}</Text>
+                                        <Text style={{ color: theme.textDim, fontSize: 12, marginTop: 4 }}>
+                                            ID: {item.id} | {item.mobile || 'No mobile'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )) : (
+                                    <View style={{ paddingVertical: 18, alignItems: 'center' }}>
+                                        <Text style={{ color: theme.textDim, fontSize: 13 }}>No patient matched your search.</Text>
+                                    </View>
+                                )}
+                            </ScrollView>
+                        </View>
+                    )}
+                    {patient && (
+                        <>
                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
                         <View>
                              <Text style={{ fontSize: 24, fontWeight: 'bold', color: theme.text }}>{patient.name}</Text>
@@ -891,6 +996,8 @@ const TemplateScreen = ({ theme, onBack, templates, setTemplates, medicines, set
                      </View>
                      <View style={{ height: 1, backgroundColor: theme.border, marginBottom: 15 }} />
                      {renderVitalsSummary()}
+                        </>
+                    )}
                      
                      <TouchableOpacity 
                         onPress={() => setShowTemplatePicker(true)}
@@ -2682,9 +2789,9 @@ const MainApp = ({ skipLogin = false, onLogoutExternal }) => {
                 }
 
                 setAppointments(clinicState.appointments || INITIAL_APPOINTMENTS);
-                setPatients(clinicState.patients || INITIAL_PATIENTS);
+                setPatients((clinicState.patients || INITIAL_PATIENTS).map(normalizePatientRecord));
                 setMedicines(clinicState.medicines || INITIAL_MEDICINES);
-                setTemplates(clinicState.templates || INITIAL_TEMPLATES);
+                setTemplates((clinicState.templates || INITIAL_TEMPLATES).map((item) => sanitizeTemplateDraft(item)));
                 setProcedures(clinicState.procedures || INITIAL_PROCEDURES);
                 setIsApiReady(true);
 
@@ -2844,34 +2951,40 @@ const MainApp = ({ skipLogin = false, onLogoutExternal }) => {
 
     const handleSavePrescription = (prescription) => {
         const patientId = prescription.patientId;
+        const targetPatient = patients.find((item) => item.id === patientId) || null;
+
+        if (!targetPatient) {
+            Alert.alert('Patient Missing', 'Please select a valid patient before saving the prescription.');
+            return;
+        }
         
         let existingRecord = null;
         if (rxIdToEdit) {
-            const patient = patients.find(p => p.id === patientId);
-            existingRecord = (patient?.rxHistory || []).find(r => r.id === rxIdToEdit);
+            existingRecord = (targetPatient.rxHistory || []).find((record) => record.id === rxIdToEdit);
         }
 
-        const recordData = {
-            id: rxIdToEdit || Date.now(),
-            date: existingRecord ? existingRecord.date : new Date().toISOString(),
-            templateName: prescription.name || '',
-            diagnosis: prescription.diagnosis,
-            medicines: prescription.medicines,
-            procedures: prescription.procedures,
-            nextVisitInvestigations: prescription.nextVisitInvestigations,
-            advice: prescription.advice,
-            referral: prescription.referral
-        };
+        const recordData = buildPrescriptionRecord({
+            draft: prescription,
+            patient: targetPatient,
+            existingRecord,
+            rxId: rxIdToEdit
+        });
 
         const updatedPatients = patients.map(p => {
             if (p.id === patientId) {
-                let currentHistory = p.rxHistory || [];
+                let currentHistory = Array.isArray(p.rxHistory) ? p.rxHistory.map((record) => (
+                    existingRecord && record.id === existingRecord.id ? recordData : record
+                )) : [];
+
                 if (rxIdToEdit) {
-                    currentHistory = currentHistory.map(r => r.id === rxIdToEdit ? recordData : r);
+                    if (!currentHistory.some((record) => record.id === recordData.id)) {
+                        currentHistory = [recordData, ...currentHistory];
+                    }
                 } else {
                     currentHistory = [recordData, ...currentHistory];
                 }
-                return { ...p, rxHistory: currentHistory };
+
+                return normalizePatientRecord({ ...p, rxHistory: currentHistory });
             }
             return p;
         });

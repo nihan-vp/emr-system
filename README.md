@@ -1,107 +1,133 @@
-# Welcome to Suhaim Soft Emr Managmnet Systen 👋
+# Clinic PPM
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Clinic PPM is a React Native and Expo clinic management app backed by an Express and MongoDB API. The project includes role-based flows for doctor, nurse, lab, and pharmacy staff, along with modules for appointments, patients, vitals, medicines, procedures, templates, and PDF generation.
 
-## Get started
+## Stack
 
-1. Install dependencies
+- Expo 54
+- React Native 0.81
+- React 19
+- React Navigation
+- Express 5
+- MongoDB and Mongoose
 
-   ```bash
-   npm install
-   ```
+## What the app includes
 
-2. Start the app
+- Login and role-based navigation for clinic staff
+- Doctor dashboard and clinic workspace
+- Appointment booking and editing
+- Patient registration and history
+- Vitals tracking
+- Prescription templates and medicine helpers
+- Procedures and lab-related screens
+- PDF generation endpoint for printable documents
 
-   ```bash
-   npx expo start
-   ```
-
-3. Start the MongoDB API in a second terminal
-
-   ```bash
-   npm run server
-   ```
-
-4. Make sure MongoDB is running locally, or set `MONGODB_URI` in `.env`
-
-   ```bash
-   MONGODB_URI=mongodb://127.0.0.1:27017/clinicppm
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Project structure
+## Project layout
 
 ```text
 clinicppm.site/
-   app/
-      _layout.js        # Expo Router stack layout
-      index.js          # Home route wrapper
-      app.js            # Secondary route wrapper
-      pages/
-         ClinicDashboardPage.js
-      components/
-         commons/        # Reusable UI primitives and shared widgets
-         navbars/        # Top bars, bottom bars, drawer bars
-         loaders/        # Splash screens, activity states, skeleton loaders
-   assets/
-      images/
-   scripts/
-      reset-project.js
+  app/
+    components/
+      commons/         Shared UI pieces and modals
+      loaders/         Splash and loading UI
+      navbars/         Side and bottom navigation
+    constants/         Theme and domain constants
+    pages/
+      ClinicDashboardPage.js
+      screens/         Role dashboards and feature screens
+    utils/             Client API and domain helpers
+  assets/              Static assets
+  scripts/             Local utility scripts
+  server/
+    src/
+      config/          Environment and DB setup
+      controllers/     Route handlers
+      models/          Mongo models
+      routes/          API route definitions
+      seed/            Default seeded state
+    index.js           Express server entry
+  App.js               Native navigation entry point
+  index.js             Expo entry
 ```
 
-Use these folders for future updates:
+## Getting started
 
-- Put full route-level screens and page implementations in **app/pages**.
-- Put shared widgets and small reusable UI in **app/components/commons**.
-- Put any navigation UI in **app/components/navbars**.
-- Put loading, splash, and empty-state loading components in **app/components/loaders**.
-- Keep the system grouped under **app** so future updates follow one consistent structure.
-
-## MongoDB integration
-
-The project now includes a MongoDB-backed API under **server/**.
-
-- `GET /api/health` checks API and database connectivity.
-- `GET /api/state` returns the clinic data used by the Expo app.
-- `PUT /api/state/:collection` persists one collection at a time (`appointments`, `patients`, `medicines`, `templates`, `procedures`).
-- `POST /api/state/reset` restores the seeded demo dataset.
-
-Environment variables live in `.env` and can be copied from `.env.example`.
-
-- `MONGODB_URI` points the Node API to MongoDB.
-- `PORT` changes the API port.
-- `EXPO_PUBLIC_API_BASE_URL` overrides the client API base URL for physical devices or remote servers.
-
-If you run Expo on a real phone, set `EXPO_PUBLIC_API_BASE_URL` to your machine's LAN IP, for example `http://192.168.1.20:4000/api`.
-
-## Get a fresh project
-
-When you're ready, run:
+### 1. Install dependencies
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Configure environment variables
 
-## Learn more
+Create or update `.env` with values for your local or hosted backend:
 
-To learn more about developing your project with Expo, look at the following resources:
+```env
+MONGODB_URI=your-mongodb-connection-string
+PORT=4000
+EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:4000/api
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Notes:
 
-## Join the community
+- `MONGODB_URI` should point to your MongoDB deployment.
+- `PORT` controls the Express API port.
+- `EXPO_PUBLIC_API_BASE_URL` is the base URL used by the Expo app.
+- If you test on a physical phone, replace `127.0.0.1` with your computer's LAN IP.
 
-Join our community of developers creating universal apps.
+### 3. Start the API
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+npm run server
+```
+
+The API exposes:
+
+- `GET /` basic server status
+- `GET /api/health` health check
+- `GET /api/state` fetch clinic state
+- `PUT /api/state/:collection` replace one collection of clinic data
+- `POST /api/state/reset` reset seeded clinic data
+- `POST /api/pdf/html-to-pdf` generate a PDF from HTML
+
+### 4. Start the Expo app
+
+```bash
+npm start
+```
+
+Useful variants:
+
+```bash
+npm run android
+npm run ios
+npm run web
+```
+
+## Development notes
+
+- The main native navigation entry is [App.js](/C:/Users/Nihan%20Ali/Projects/Cursor/clinicppm.site/App.js).
+- Most feature implementation lives under [app/pages](/C:/Users/Nihan%20Ali/Projects/Cursor/clinicppm.site/app/pages) and [app/components](/C:/Users/Nihan%20Ali/Projects/Cursor/clinicppm.site/app/components).
+- The client API helpers are under [app/utils](/C:/Users/Nihan%20Ali/Projects/Cursor/clinicppm.site/app/utils).
+- The Express backend starts from [server/index.js](/C:/Users/Nihan%20Ali/Projects/Cursor/clinicppm.site/server/index.js).
+- The project currently contains ongoing worktree changes in app screens and navigation files, so treat local UI behavior as active development rather than frozen documentation.
+
+## Scripts
+
+- `npm start` starts Expo
+- `npm run server` starts the Express API
+- `npm run android` builds and runs Android
+- `npm run ios` builds and runs iOS
+- `npm run web` starts the web target
+- `npm run lint` runs lint checks
+- `npm run reset-project` runs the local reset utility
+
+## Troubleshooting
+
+- If the mobile app cannot reach the API, verify `EXPO_PUBLIC_API_BASE_URL`.
+- If the server fails at startup, confirm MongoDB is reachable from `MONGODB_URI`.
+- If Android native dependencies behave oddly after package changes, reinstall dependencies and rebuild the native app.
+
+## License
+
+This repository does not currently declare a license.

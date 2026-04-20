@@ -1,11 +1,14 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useState } from 'react';
 import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { getMedicalModalTheme } from '../../constants/tableTheme';
 import { Calendar, Check, ChevronDown, Clock, Droplet, Mail, Phone, User, X } from 'lucide-react-native';
 import { BLOOD_GROUPS } from '../../constants/medical';
 import { CustomPicker, InputGroup } from './FormControls';
 
 export default function AppointmentEditModal({ visible, theme, styles, form, setForm, onClose, onSave }) {
+    const modalTheme = getMedicalModalTheme(theme);
     const [pickerType, setPickerType] = useState(null);
     const [pickerMode, setPickerMode] = useState(null);
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -73,85 +76,91 @@ export default function AppointmentEditModal({ visible, theme, styles, form, set
                 )
             )}
             <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-                <View style={{ flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.45)', justifyContent: 'center', paddingHorizontal: 18, paddingVertical: 24 }}>
-                    <View style={{ backgroundColor: theme.cardBg, borderRadius: 28, borderWidth: 1, borderColor: theme.border, overflow: 'hidden', maxHeight: '92%' }}>
-                        <View style={{ paddingHorizontal: 20, paddingVertical: 18, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: theme.border }}>
-                            <View>
-                                <Text style={{ color: theme.text, fontSize: 20, fontWeight: '800' }}>Edit Appointment</Text>
-                                <Text style={{ color: theme.textDim, fontSize: 12, marginTop: 4 }}>Update the appointment details and save the changes.</Text>
-                            </View>
-                            <TouchableOpacity onPress={onClose} style={{ width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.inputBg }}>
-                                <X size={20} color={theme.text} />
-                            </TouchableOpacity>
-                        </View>
+                <View style={{ flex: 1, backgroundColor: modalTheme.overlay, justifyContent: 'center', paddingHorizontal: 0, paddingVertical: 0 }}>
+                    <LinearGradient colors={modalTheme.shellColors} style={{ borderRadius: 32, marginHorizontal: 12, padding: 2, maxHeight: '92%' }}>
+                        <View style={{ backgroundColor: modalTheme.surface, borderRadius: 28, borderWidth: 1.5, borderColor: modalTheme.shellBorder, overflow: 'hidden', maxHeight: '100%' }}>
+                            <LinearGradient colors={modalTheme.headerColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ paddingHorizontal: 22, paddingTop: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: modalTheme.sectionBorder, position: 'relative' }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                                    <View style={{ flex: 1, paddingRight: 48 }}>
+                                        <Text style={{ color: modalTheme.headerText, fontSize: 22, fontWeight: '900', letterSpacing: 0.5 }}>Edit Appointment</Text>
+                                        <Text style={{ color: modalTheme.eyebrowText, fontSize: 13, marginTop: 4, fontWeight: '600' }}>Update the appointment details and save the changes.</Text>
+                                    </View>
+                                    <TouchableOpacity onPress={onClose} style={{ position: 'absolute', top: 8, right: 0, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: modalTheme.closeBg, zIndex: 10 }}>
+                                        <X size={22} color={modalTheme.closeIcon} />
+                                    </TouchableOpacity>
+                                </View>
+                            </LinearGradient>
 
-                        <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }} showsVerticalScrollIndicator={false}>
-                            <InputGroup icon={User} label="Patient Name *" value={form.name} onChange={(value) => setForm((prev) => ({ ...prev, name: value }))} theme={theme} styles={styles} />
-                            <InputGroup icon={Phone} label="Mobile Number *" keyboardType="phone-pad" value={form.mobile} onChange={(value) => setForm((prev) => ({ ...prev, mobile: value }))} theme={theme} styles={styles} />
-                            <InputGroup icon={Mail} label="Email Address" keyboardType="email-address" value={form.email} onChange={(value) => setForm((prev) => ({ ...prev, email: value }))} theme={theme} styles={styles} placeholder="patient@email.com" />
+                            <ScrollView contentContainerStyle={{ padding: 22, gap: 18 }} showsVerticalScrollIndicator={false}>
+                            <InputGroup icon={User} label="Patient Name *" value={form.name} onChange={(value) => setForm((prev) => ({ ...prev, name: value }))} theme={{...theme, primary: modalTheme.headerColors[0]}} styles={styles} />
+                            <InputGroup icon={Phone} label="Mobile Number *" keyboardType="phone-pad" value={form.mobile} onChange={(value) => setForm((prev) => ({ ...prev, mobile: value }))} theme={{...theme, primary: modalTheme.headerColors[0]}} styles={styles} />
+                            <InputGroup icon={Mail} label="Email Address" keyboardType="email-address" value={form.email} onChange={(value) => setForm((prev) => ({ ...prev, email: value }))} theme={{...theme, primary: modalTheme.headerColors[0]}} styles={styles} placeholder="patient@email.com" />
 
-                            <View>
-                                <Text style={{ color: theme.textDim, marginBottom: 8, fontWeight: '600' }}>Blood Group</Text>
-                                <TouchableOpacity onPress={() => setPickerType('blood')} style={[styles.inputContainer, { backgroundColor: theme.cardBg, borderColor: theme.border, justifyContent: 'space-between', paddingRight: 15 }]}>
+                            <View style={{ backgroundColor: modalTheme.sectionBg, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: modalTheme.sectionBorder }}>
+                                <Text style={{ color: modalTheme.subtleText, marginBottom: 8, fontWeight: '700', fontSize: 15 }}>Blood Group</Text>
+                                <TouchableOpacity onPress={() => setPickerType('blood')} style={[styles.inputContainer, { backgroundColor: modalTheme.surface, borderColor: modalTheme.sectionBorder, justifyContent: 'space-between', paddingRight: 15 }]}> 
                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                        <Droplet size={20} color={theme.textDim} />
+                                        <Droplet size={20} color={modalTheme.accentText} />
                                         <Text style={{ color: theme.text, marginLeft: 10, fontSize: 16 }}>{form.blood}</Text>
                                     </View>
-                                    <ChevronDown size={16} color={theme.textDim} />
+                                    <ChevronDown size={16} color={modalTheme.accentText} />
                                 </TouchableOpacity>
                             </View>
 
                             {form.blood === 'Custom' && (
-                                <View>
-                                    <Text style={{ color: theme.textDim, marginBottom: 8, fontWeight: '600' }}>Enter Blood Group</Text>
-                                    <View style={[styles.inputContainer, { backgroundColor: theme.cardBg, borderColor: theme.border }]}>
-                                        <Droplet size={20} color={theme.primary} />
-                                        <TextInput style={[styles.textInput, { color: theme.text }]} value={form.customBlood} onChangeText={(value) => setForm((prev) => ({ ...prev, customBlood: value }))} placeholder="Type blood group here..." placeholderTextColor={theme.textDim} />
+                                <View style={{ backgroundColor: modalTheme.sectionBg, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: modalTheme.sectionBorder, marginTop: 8 }}>
+                                    <Text style={{ color: modalTheme.subtleText, marginBottom: 8, fontWeight: '700', fontSize: 15 }}>Enter Blood Group</Text>
+                                    <View style={[styles.inputContainer, { backgroundColor: modalTheme.surface, borderColor: modalTheme.sectionBorder }]}> 
+                                        <Droplet size={20} color={modalTheme.accentText} />
+                                        <TextInput style={[styles.textInput, { color: theme.text }]} value={form.customBlood} onChangeText={(value) => setForm((prev) => ({ ...prev, customBlood: value }))} placeholder="Type blood group here..." placeholderTextColor={modalTheme.subtleText} />
                                     </View>
                                 </View>
                             )}
 
-                            <View style={{ flexDirection: 'row', gap: 14 }}>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={{ color: theme.textDim, marginBottom: 8, fontWeight: '600' }}>Date</Text>
-                                    <TouchableOpacity onPress={() => openDatePicker('date', form.dateObj)} style={[styles.inputContainer, { backgroundColor: theme.cardBg, borderColor: theme.border, justifyContent: 'space-between', paddingRight: 15 }]}>
+                            <View style={{ flexDirection: 'row', gap: 16 }}>
+                                <View style={{ flex: 1, backgroundColor: modalTheme.sectionBg, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: modalTheme.sectionBorder }}>
+                                    <Text style={{ color: modalTheme.subtleText, marginBottom: 8, fontWeight: '700', fontSize: 15 }}>Date</Text>
+                                    <TouchableOpacity onPress={() => openDatePicker('date', form.dateObj)} style={[styles.inputContainer, { backgroundColor: modalTheme.surface, borderColor: modalTheme.sectionBorder, justifyContent: 'space-between', paddingRight: 15 }]}> 
                                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                            <Calendar size={20} color={theme.textDim} />
+                                            <Calendar size={20} color={modalTheme.accentText} />
                                             <Text style={{ color: theme.text, marginLeft: 10, fontSize: 16 }}>{form.date}</Text>
                                         </View>
-                                        <ChevronDown size={16} color={theme.textDim} />
+                                        <ChevronDown size={16} color={modalTheme.accentText} />
                                     </TouchableOpacity>
                                 </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={{ color: theme.textDim, marginBottom: 8, fontWeight: '600' }}>Time</Text>
-                                    <TouchableOpacity onPress={() => openDatePicker('time', form.timeObj)} style={[styles.inputContainer, { backgroundColor: theme.cardBg, borderColor: theme.border, justifyContent: 'space-between', paddingRight: 15 }]}>
+                                <View style={{ flex: 1, backgroundColor: modalTheme.sectionBg, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: modalTheme.sectionBorder }}>
+                                    <Text style={{ color: modalTheme.subtleText, marginBottom: 8, fontWeight: '700', fontSize: 15 }}>Time</Text>
+                                    <TouchableOpacity onPress={() => openDatePicker('time', form.timeObj)} style={[styles.inputContainer, { backgroundColor: modalTheme.surface, borderColor: modalTheme.sectionBorder, justifyContent: 'space-between', paddingRight: 15 }]}> 
                                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                            <Clock size={20} color={theme.textDim} />
+                                            <Clock size={20} color={modalTheme.accentText} />
                                             <Text style={{ color: theme.text, marginLeft: 10, fontSize: 16 }}>{form.time}</Text>
                                         </View>
-                                        <ChevronDown size={16} color={theme.textDim} />
+                                        <ChevronDown size={16} color={modalTheme.accentText} />
                                     </TouchableOpacity>
                                 </View>
                             </View>
 
-                            <View>
-                                <Text style={{ color: theme.textDim, marginBottom: 8, fontWeight: '600' }}>Booking Notes</Text>
-                                <View style={{ backgroundColor: theme.cardBg, borderWidth: 1, borderColor: theme.border, borderRadius: 16, padding: 15, minHeight: 120 }}>
-                                    <TextInput style={{ color: theme.text, fontSize: 16, width: '100%', textAlignVertical: 'top', flex: 1 }} value={form.notes} onChangeText={(value) => setForm((prev) => ({ ...prev, notes: value }))} placeholder="Type complaints, visit reason, or doctor's notes here..." placeholderTextColor={theme.textDim} multiline />
+                            <View style={{ backgroundColor: modalTheme.sectionBg, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: modalTheme.sectionBorder }}>
+                                <Text style={{ color: modalTheme.subtleText, marginBottom: 8, fontWeight: '700', fontSize: 15 }}>Booking Notes</Text>
+                                <View style={{ backgroundColor: modalTheme.surface, borderWidth: 1, borderColor: modalTheme.sectionBorder, borderRadius: 16, padding: 15, minHeight: 120 }}>
+                                    <TextInput style={{ color: theme.text, fontSize: 16, width: '100%', textAlignVertical: 'top', flex: 1 }} value={form.notes} onChangeText={(value) => setForm((prev) => ({ ...prev, notes: value }))} placeholder="Type complaints, visit reason, or doctor's notes here..." placeholderTextColor={modalTheme.subtleText} multiline />
                                 </View>
                             </View>
                         </ScrollView>
 
-                        <View style={{ padding: 20, borderTopWidth: 1, borderTopColor: theme.border, flexDirection: 'row', gap: 12 }}>
-                            <TouchableOpacity onPress={onClose} style={{ flex: 1, height: 52, borderRadius: 16, backgroundColor: theme.inputBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: theme.border }}>
-                                <Text style={{ color: theme.text, fontSize: 15, fontWeight: '700' }}>Cancel</Text>
+                        <View style={{ padding: 22, borderTopWidth: 1, borderTopColor: modalTheme.sectionBorder, flexDirection: 'row', gap: 14, backgroundColor: modalTheme.sectionBg }}>
+                            <TouchableOpacity onPress={onClose} style={{ flex: 1, height: 52, borderRadius: 16, backgroundColor: modalTheme.cancelBg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: modalTheme.sectionBorder }}>
+                                <Text style={{ color: modalTheme.cancelText, fontSize: 15, fontWeight: '700' }}>Cancel</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={onSave} style={{ flex: 1, height: 52, borderRadius: 16, backgroundColor: theme.primary, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}>
-                                <Check size={18} color="white" />
-                                <Text style={{ color: 'white', fontSize: 15, fontWeight: '800' }}>Save Changes</Text>
-                            </TouchableOpacity>
+                            <LinearGradient colors={modalTheme.headerColors} style={{ flex: 1, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}>
+                                <TouchableOpacity onPress={onSave} style={{ flex: 1, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}>
+                                    <Check size={18} color="#fff" />
+                                    <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>Save Changes</Text>
+                                </TouchableOpacity>
+                            </LinearGradient>
                         </View>
-                    </View>
+                        </View>
+                    </LinearGradient>
                 </View>
             </Modal>
         </>

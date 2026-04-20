@@ -330,6 +330,7 @@ export default function PatientHistoryScreen({
         const reportItems = uploadedReports.length > 0 ? uploadedReports.map((item) => `<li>${toDisplayText(item.testName)}: ${toDisplayText(item.fileName)}</li>`).join('') : '';
 
         return `
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -373,16 +374,31 @@ export default function PatientHistoryScreen({
             position: relative;
         }
 
-        /* EXACT OLD LAYOUT STYLES */
-        .header-band {
-            background: #009b8e;
-            color: #ffffff; 
-            text-align: center; 
-            padding: 20px 10px;
+        /* --- Updated Prescription Header Styles --- */
+        .prescription-header-box {
+            text-align: center;
+            padding: 32px 0 12px 0;
+            background: #fff;
         }
-        .header-title { margin: 0 0 4px 0; font-size: 24px; font-weight: bold; letter-spacing: 0.5px; }
-        .header-sub { margin: 0 0 6px 0; font-size: 14px; }
-        .header-booking { margin: 0; font-size: 16px; font-weight: bold; }
+        .prescription-header-main {
+            font-size: 32px;
+            font-weight: bold;
+            color: #065f53;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+        .prescription-header-sub {
+            font-size: 17px;
+            color: #607d8b;
+            margin-bottom: 18px;
+        }
+        .prescription-header-underline {
+            height: 4px;
+            width: 97%;
+            background: #20b2aa;
+            margin: 0 auto 0 auto;
+            border-radius: 2px;
+        }
 
         .content { padding: 20px 30px; display: flex; flex-direction: column; flex: 1; }
 
@@ -458,12 +474,12 @@ export default function PatientHistoryScreen({
 <body>
     <div class="mobile-wrapper">
         <div class="page">
-            
-            <!-- Exact Header Match -->
-            <div class="header-band">
-                <h1 class="header-title">Dr.MANSOOR ALI.V.P, MD (PHYSICIAN)</h1>
-                <p class="header-sub">General Practitioner | Reg No: 35083 | +91 9895353078 | Pathappiriyam</p>
-                <p class="header-booking">BOOKING NO: +${bookingNumber}</p>
+
+            <!-- Updated Header Design -->
+            <div class="prescription-header-box">
+                <div class="prescription-header-main">Dr. Mansoor</div>
+                <div class="prescription-header-sub">Booking: | Phone: 9895353078</div>
+                <div class="prescription-header-underline"></div>
             </div>
 
             <div class="content">

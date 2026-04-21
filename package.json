@@ -82,7 +82,7 @@
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/react": "~19.1.0",
-    "eslint": "^9.25.0",
+    "eslint": "^8.57.1",
     "eslint-config-expo": "~10.0.0",
     "expo": "^54.0.33",
     "expo-module-scripts": "^3.0.5",
@@ -92,5 +92,10 @@
   "engines": {
     "node": ">=18"
   },
-  "type": "module"
+  "type": "module",
+  "overrides": {
+    "@tootallnate/once": "^3.0.1",
+    "minimatch": "^9.0.7",
+    "@xmldom/xmldom": "^0.8.12"
+  }
 }

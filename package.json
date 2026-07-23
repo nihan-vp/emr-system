@@ -3,7 +3,7 @@
   "main": "index.js",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start",
+    "start": "npx expo start",
     "server": "node ./server/index.js",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
@@ -82,6 +82,7 @@
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/react": "~19.1.0",
+    "@types/react-native": "^0.72.8",
     "eslint": "^8.57.1",
     "eslint-config-expo": "~10.0.0",
     "expo": "^54.0.33",
